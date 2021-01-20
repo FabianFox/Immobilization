@@ -84,11 +84,34 @@ demig.df <- demig.df %>%
          !nationality_iso3 %in% missing$destination_iso3)
 
 # Second stage missing
+missing2 <- demig.df %>%
+  rowwise() %>%
+  mutate(row_missing = sum(is.na(c_across(num_range("x", 1993:2013))))) %>%
+  filter(row_missing > 0) %>% # Keep Kyrgzstan with only one missing value
+  count(destination_iso3) %>%
+  filter(n > 1)
+
+# Remove counties with multiple missing values
+demig.df <- demig.df %>%
+  filter(!destination_iso3 %in% missing2$destination_iso3,
+         !nationality_iso3 %in% missing2$destination_iso3)
 
 # Long format 
 ### ------------------------------------------------------------------------ ###
 demig_long.df <- demig.df %>%
-  pivot_longer(starts_with("x"), names_to = "year", values_to = "visa_restriction") %>%
+  pivot_longer(starts_with("x"), names_to = "year", values_to = "visa") %>%
   mutate(year = strtoi(str_extract(year, "[:digit:]{4}")),
-         visa_restriction = if_else(destination_iso3 == nationality_iso3, 0, 
-                                    visa_restriction))
+         visa = if_else(destination_iso3 == nationality_iso3, 0, visa))
+
+# Blacklisted countries to visa restriction == 0
+### ------------------------------------------------------------------------ ###
+demig_long.df <- demig_long.df %>%
+  mutate(visa = if_else(visa == 2, 0, visa)) %>%
+  fill(visa, .direction = "down")
+
+# Switching visa regulations
+switch.df <- demig_long.df %>%
+  group_by(destination_iso3, nationality_iso3) %>%
+  mutate(switch = ifelse(visa != lag(visa), 1, 0)) %>%
+  summarise(num_switches = sum(switch, na.rm = TRUE)) %>%
+  ungroup()
