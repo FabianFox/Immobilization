@@ -109,7 +109,47 @@ demig_long.df <- demig_long.df %>%
   mutate(visa = if_else(visa == 2, 0, visa)) %>%
   fill(visa, .direction = "down")
 
+# Transform to network
+### ------------------------------------------------------------------------ ###
+# Nest by year
+demig_net.df <- demig_long.df %>%
+  select(destination_iso3, nationality_iso3, year, visa) %>%
+  group_by(year) %>%
+  nest()
+
+# Load network libraries
+pkg_attach2("igraph", "intergraph")
+
+# Transform into network format
+# Edgelist
+demig_net.df <- demig_net.df %>%
+  mutate(nodes = map(data, ~.x %>%
+                              pull(destination_iso3) %>%
+                              unique()),
+         edges = map(data, ~.x %>%
+                       filter(visa == 1) %>%
+                       select(from = destination_iso3, 
+                              to = nationality_iso3)))
+
+# Igraph
+demig_net.df <- demig_net.df %>%
+  mutate(igraph = map2(.x = edges, .y = nodes, ~graph_from_data_frame(
+    d = .x, 
+    vertices = .y,
+    directed = TRUE
+  )))
+
+# Adjacency matrix
+demig_net.df <- demig_net.df %>%
+  mutate(adj_matrix = map(igraph, ~get.adjacency(.x, sparse = FALSE)))
+
+# Network
+demig_net.df <- demig_net.df %>%
+  mutate(network = map(adj_matrix, ~as.network(.x, directed = TRUE)))
+
+
 # Switching visa regulations
+### ------------------------------------------------------------------------ ###
 switch.df <- demig_long.df %>%
   group_by(destination_iso3, nationality_iso3) %>%
   mutate(switch = ifelse(visa != lag(visa), 1, 0)) %>%
