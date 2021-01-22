@@ -29,19 +29,20 @@ riks_scrape_fun <- possibly(riks_scrape_fun, otherwise = NA)
 reg_int.df <- reg_int.df %>%
   mutate(tables = imap(.x = url, ~ {
     print(paste("Iterating over", .y))
-    Sys.sleep(sample(3:7, 1))
+    Sys.sleep(sample(3:10, 1))
     riks_scrape_fun(.x)
   }))
 
 # Some connections are unstable; repeat for those entries
-reg_int_exp.df <- reg_int.df %>%
-  mutate(missing = map_lgl(tables, is_null))
-
-reg_int_exp.df <- reg_int_exp.df %>%
-  mutate(tables = if_else(missing == TRUE,
+reg_int.df <- reg_int.df %>%
+  mutate(tables = if_else(is.na(tables),
                           imap(.x = url, ~ {
                                  print(paste("Iterating over", .y))
                                  Sys.sleep(sample(3:7, 1))
                                  riks_scrape_fun(.x)
                                  }), 
                           tables))
+
+
+# Export
+rio::export(reg_int.df, "./data/Regional Integration/RegMembership.rds")
