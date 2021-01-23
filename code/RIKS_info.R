@@ -2,7 +2,7 @@
 
 # Load/install packages
 if (!require("xfun")) install.packages("xfun")
-pkg_attach2("tidyverse", "rvest", "docxtractr")
+pkg_attach2("tidyverse", "rvest", "rio", "docxtractr")
 
 # All regional integration entities in RIKS
 reg_int.df <- read_docx("./data/Regional Integration/AgreementList_August2020_0.docx") %>%
@@ -34,15 +34,18 @@ reg_int.df <- reg_int.df %>%
   }))
 
 # Some connections are unstable; repeat for those entries
+reg_missing.df <- reg_int.df %>%
+  filter(is.na(tables)) %>%
+  mutate(tables = imap(.x = url, ~ {
+    print(paste("Iterating over", .y))
+    Sys.sleep(sample(3:10, 1))
+    riks_scrape_fun(.x)
+  }))
+
+# Update rows
 reg_int.df <- reg_int.df %>%
-  mutate(tables = if_else(is.na(tables),
-                          imap(.x = url, ~ {
-                                 print(paste("Iterating over", .y))
-                                 Sys.sleep(sample(3:7, 1))
-                                 riks_scrape_fun(.x)
-                                 }), 
-                          tables))
-
-
+  rows_update(reg_missing.df %>%
+                select(code, tables), by = "code")
+  
 # Export
 rio::export(reg_int.df, "./data/Regional Integration/RegMembership.rds")
