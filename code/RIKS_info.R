@@ -100,12 +100,40 @@ reg_select_int.df <- tribble(
   "PAFTA", "Pan-Arab Free Trade Area",
   "SACU", "Southern African Customs Union",
   "SADC", "Southern African Development Community",
-  "SAFTA", "South Asian Free Trade Agreement")
-
-# AFTA (included as ASEAN), APTA 
-reg_select_int.df[which(!reg_select_int.df$code %in% reg_int.df$code),]$code
+  "SAFTA", "South Asian Free Trade Agreement") %>%
+  mutate(code = case_when(code == "AFTA" ~ "ASEAN", 
+                          code == "SAFTA" ~ "SAARC",
+                          TRUE ~ code))
 
 # Add missing economic blocs included in Czaika et al. (2018)
 # APTA, PAFTA, SAFTA
+reg_add.df <- reg_select_int.df %>%
+  filter(!reg_select_int.df$code %in% reg_int.df$code) %>%
+  mutate(
+    tables = 
+      
+    list(
+      tibble(
+        country = c("Bangladesh", "China", "India", "Korea, Rep.", "Laos", 
+                  "Sri Lanka", "Mongolia"),
+        joined = c(1975, 2001, 1975, 1975, 1975, 1975, 2013),
+        current_status = rep(2020, 7),
+        country_iso3 = countrycode(country, "country.name.en", "iso3c")),
+      tibble(
+        country = c("Algeria", "Bahrain", "Egypt", "Iraq", "Jordan", "Kuwait", 
+                  "Lebanon", "Morocco", "Oman", "Palestine", "Qatar", 
+                  "Saudi Arabia", "Sudan", "Syria", "Tunisia", 
+                  "United Arab Emirates", "Yemen"),
+        joined = rep(2005, 17),
+        current_status = rep(2020, 17), 
+        country_iso3 = countrycode(country, "country.name.en", "iso3c"))),
+    
+    url = NA,
+    empty_table = list(FALSE))
+
+# Join to main data
+reg_select_int.df <- reg_int.df %>%
+  filter(code %in% reg_select_int.df$code) %>%
+  bind_rows(reg_add.df)
   
 # Export
