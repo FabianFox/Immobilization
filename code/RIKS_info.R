@@ -2,7 +2,7 @@
 
 # Load/install packages
 if (!require("xfun")) install.packages("xfun")
-pkg_attach2("tidyverse", "rvest", "rio", "docxtractr", "countrycode")
+pkg_attach2("tidyverse", "rvest", "rio", "docxtractr", "countrycode", "janitor")
 
 # All regional integration entities in RIKS
 reg_int.df <- read_docx("./data/Regional Integration/AgreementList_August2020_0.docx") %>%
@@ -153,4 +153,5 @@ reg_select_int.df <- reg_int.df %>%
   filter(code %in% reg_select_int.df$code) %>%
   bind_rows(reg_add.df)
 
-# Export
+# Import/export
+# export(reg_select_int.df, "./data/Regional Integration/RegMembership_Small.rds")
